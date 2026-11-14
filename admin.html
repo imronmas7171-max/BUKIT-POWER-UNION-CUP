@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>จัดการข้อมูลทีม - ตารางคะแนนลีก 2026/27</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        premier: '#38003c',
+                        accent: '#00ff87',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"] { -moz-appearance: textfield; }
+        .num-input { width: 3.25rem; text-align: center; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <header class="bg-premier text-white py-4 shadow">
+        <div class="container mx-auto px-4 flex flex-wrap justify-between items-center gap-3">
+            <h1 class="text-xl font-bold flex items-center gap-2">
+                <i class="fa-solid fa-futbol text-accent"></i> จัดการข้อมูลทีม
+            </h1>
+            <div class="flex items-center gap-2">
+                <a href="index.html" target="_blank" class="bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded font-medium text-sm transition-colors">
+                    <i class="fa-solid fa-eye mr-1"></i> ดูตารางคะแนน
+                </a>
+                <button id="logout" class="bg-accent text-premier px-4 py-2 rounded font-medium text-sm hover:bg-accent/90 transition-colors">
+                    <i class="fa-solid fa-right-from-bracket mr-1"></i> ออกจากระบบ
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8 max-w-6xl">
+        <!-- แถบปุ่มดำเนินการ -->
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div class="flex flex-wrap gap-2">
+                <button id="add-team" class="bg-premier text-white px-4 py-2 rounded-lg font-medium hover:bg-premier/90 transition-colors flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> เพิ่มทีม
+                </button>
+                <button id="reset-data" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-100 transition-colors flex items-center gap-2">
+                    <i class="fa-solid fa-rotate-left"></i> โหลดข้อมูลตัวอย่าง
+                </button>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="text-sm text-gray-500">จำนวนทีม: <span id="team-count" class="font-bold text-premier">0</span></span>
+                <button id="save-data" class="bg-accent text-premier px-6 py-2 rounded-lg font-bold hover:bg-accent/90 transition-colors flex items-center gap-2 shadow">
+                    <i class="fa-solid fa-floppy-disk"></i> บันทึกข้อมูล
+                </button>
+            </div>
+        </div>
+
+        <!-- ข้อความแจ้งเตือน -->
+        <div id="saved-msg" class="hidden mb-4 bg-green-50 border border-green-300 text-green-700 px-4 py-3 rounded-lg flex items-center gap-2">
+            <i class="fa-solid fa-circle-check"></i>
+            <span>บันทึกข้อมูลเรียบร้อยแล้ว เปิดหน้าตารางคะแนนเพื่อดูผลลัพธ์ (กดปุ่ม "ดูตารางคะแนน" ด้านบน)</span>
+        </div>
+        <div id="error-msg" class="hidden mb-4 bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <span id="error-text">เกิดข้อผิดพลาด</span>
+        </div>
+
+        <!-- ตารางแก้ไขข้อมูล -->
+        <div class="bg-white rounded-xl shadow overflow-hidden">
+            <div class="bg-premier text-white p-4">
+                <h2 class="text-lg font-semibold">แก้ไขสถิติทีม</h2>
+                <p class="text-sm text-gray-300">MP, GD, Pts คำนวณอัตโนมัติจาก W/D/L/GF/GA ที่กรอก — ไม่ต้องพิมพ์เอง</p>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-center text-sm">
+                    <thead class="bg-gray-100 text-gray-700">
+                        <tr>
+                            <th class="py-3 px-2">#</th>
+                            <th class="py-3 px-3 text-left min-w-[160px]">ชื่อทีม</th>
+                            <th class="py-3 px-2" title="ชนะ">W</th>
+                            <th class="py-3 px-2" title="เสมอ">D</th>
+                            <th class="py-3 px-2" title="แพ้">L</th>
+                            <th class="py-3 px-2" title="ประตูได้">GF</th>
+                            <th class="py-3 px-2" title="ประตูเสีย">GA</th>
+                            <th class="py-3 px-2" title="จำนวนนัด (อัตโนมัติ)">MP</th>
+                            <th class="py-3 px-2" title="ผลต่างประตู (อัตโนมัติ)">GD</th>
+                            <th class="py-3 px-2 font-bold" title="คะแนน (อัตโนมัติ)">Pts</th>
+                            <th class="py-3 px-2">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rows-body"></tbody>
+                </table>
+            </div>
+            <div id="empty-state" class="hidden p-8 text-center text-gray-400">
+                <i class="fa-solid fa-futbol text-4xl mb-3 block"></i>
+                ยังไม่มีข้อมูลทีม กดปุ่ม "เพิ่มทีม" เพื่อเริ่มต้น
+            </div>
+        </div>
+
+        <p class="text-center text-gray-500 text-xs mt-4">
+            W=ชนะ (3 คะแนน), D=เสมอ (1 คะแนน), L=แพ้, GF=ประตูได้, GA=ประตูเสีย, MP=W+D+L, GD=GF-GA, Pts=W×3+D
+        </p>
+    </main>
+
+    <script>
+        // ==================== ข้อมูลตัวอย่างเริ่มต้น (ตรงกับ index.html) ====================
+        const defaultData = [
+            { id: 1, name: 'Arsenal', mp: 10, w: 9, d: 0, l: 1, gf: 25, ga: 5, gd: 20, pts: 27 },
+            { id: 2, name: 'Brighton', mp: 10, w: 7, d: 1, l: 2, gf: 26, ga: 7, gd: 19, pts: 22 },
+            { id: 3, name: 'Manchester City', mp: 10, w: 7, d: 0, l: 3, gf: 21, ga: 13, gd: 8, pts: 21 },
+            { id: 4, name: 'Liverpool', mp: 10, w: 5, d: 3, l: 2, gf: 14, ga: 10, gd: 4, pts: 18 },
+            { id: 5, name: 'Chelsea', mp: 10, w: 5, d: 1, l: 4, gf: 19, ga: 16, gd: 3, pts: 16 },
+            { id: 6, name: 'Everton', mp: 10, w: 4, d: 4, l: 2, gf: 12, ga: 10, gd: 2, pts: 16 }
+        ];
+
+        // ==================== safe storage helpers ====================
+        function safeGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
+        function safeSet(key, val) { try { localStorage.setItem(key, val); } catch (e) {} }
+        function safeRemove(key) { try { localStorage.removeItem(key); } catch (e) {} }
+        function sessGet(key) { try { return sessionStorage.getItem(key); } catch (e) { return null; } }
+        function sessRemove(key) { try { sessionStorage.removeItem(key); } catch (e) {} }
+
+        // ==================== auth guard: ยังไม่ล็อกอินให้กลับไปหน้า login ====================
+        if (safeGet('isLoggedIn') !== 'true') {
+            location.replace('login.html');
+        }
+
+        // ==================== โหลดข้อมูลทีม ====================
+        function loadTeams() {
+            try {
+                const raw = safeGet('leagueData');
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (Array.isArray(parsed)) return parsed.map(t => ({
+                        id: t.id || 0,
+                        name: String(t.name || ''),
+                        mp: +t.mp || 0, w: +t.w || 0, d: +t.d || 0, l: +t.l || 0,
+                        gf: +t.gf || 0, ga: +t.ga || 0, gd: +t.gd || 0, pts: +t.pts || 0
+                    }));
+                }
+            } catch (e) { /* fall through */ }
+            return JSON.parse(JSON.stringify(defaultData));
+        }
+
+        let teams = loadTeams();
+
+        // ==================== คำนวณค่าอัตโนมัติ ====================
+        function recalc(t) {
+            t.w = +t.w || 0; t.d = +t.d || 0; t.l = +t.l || 0;
+            t.gf = +t.gf || 0; t.ga = +t.ga || 0;
+            t.mp = t.w + t.d + t.l;
+            t.gd = t.gf - t.ga;
+            t.pts = t.w * 3 + t.d;
+            return t;
+        }
+
+        // ==================== render ตาราง ====================
+        const tbody = document.getElementById('rows-body');
+        const emptyState = document.getElementById('empty-state');
+
+        function render() {
+            tbody.innerHTML = '';
+            teams.forEach((t, i) => {
+                recalc(t);
+                const tr = document.createElement('tr');
+                tr.className = 'border-b hover:bg-gray-50';
+                tr.innerHTML = `
+                    <td class="py-2 px-2 font-bold text-gray-500">${i + 1}</td>
+                    <td class="py-2 px-3 text-left">
+                        <input type="text" data-i="${i}" data-field="name" value="${t.name.replace(/"/g, '&quot;')}"
+                            class="w-full px-2 py-1.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-premier focus:border-transparent font-medium">
+                    </td>
+                    <td class="py-2 px-1"><input type="number" min="0" data-i="${i}" data-field="w" value="${t.w}" class="num-input px-1 py-1.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-premier text-green-600 font-medium"></td>
+                    <td class="py-2 px-1"><input type="number" min="0" data-i="${i}" data-field="d" value="${t.d}" class="num-input px-1 py-1.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-premier text-gray-600 font-medium"></td>
+                    <td class="py-2 px-1"><input type="number" min="0" data-i="${i}" data-field="l" value="${t.l}" class="num-input px-1 py-1.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-premier text-red-500 font-medium"></td>
+                    <td class="py-2 px-1"><input type="number" min="0" data-i="${i}" data-field="gf" value="${t.gf}" class="num-input px-1 py-1.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-premier font-medium"></td>
+                    <td class="py-2 px-1"><input type="number" min="0" data-i="${i}" data-field="ga" value="${t.ga}" class="num-input px-1 py-1.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-premier font-medium"></td>
+                    <td class="py-2 px-2" data-cell="mp">${t.mp}</td>
+                    <td class="py-2 px-2 ${t.gd > 0 ? 'text-green-600' : t.gd < 0 ? 'text-red-500' : ''}" data-cell="gd">${t.gd > 0 ? '+' : ''}${t.gd}</td>
+                    <td class="py-2 px-2 font-bold text-premier" data-cell="pts">${t.pts}</td>
+                    <td class="py-2 px-2">
+                        <button data-del="${i}" class="text-red-500 hover:text-red-700 hover:bg-red-50 w-8 h-8 rounded-full transition-colors" title="ลบทีม">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            document.getElementById('team-count').textContent = teams.length;
+            emptyState.classList.toggle('hidden', teams.length > 0);
+        }
+
+        // ==================== event: พิมพ์ในช่อง input → อัปเดต state + คำนวณค่าใหม่ทันที ====================
+        tbody.addEventListener('input', function (e) {
+            const inp = e.target.closest('[data-field]');
+            if (!inp) return;
+            const i = +inp.dataset.i;
+            const f = inp.dataset.field;
+            if (f === 'name') {
+                teams[i].name = inp.value;
+            } else {
+                teams[i][f] = +inp.value || 0;
+            }
+            recalc(teams[i]);
+            const row = inp.closest('tr');
+            if (row) {
+                row.querySelector('[data-cell="mp"]').textContent = teams[i].mp;
+                const gdCell = row.querySelector('[data-cell="gd"]');
+                gdCell.textContent = (teams[i].gd > 0 ? '+' : '') + teams[i].gd;
+                gdCell.className = 'py-2 px-2 ' + (teams[i].gd > 0 ? 'text-green-600' : teams[i].gd < 0 ? 'text-red-500' : '');
+                row.querySelector('[data-cell="pts"]').textContent = teams[i].pts;
+            }
+        });
+
+        // ==================== event: ลบทีม ====================
+        tbody.addEventListener('click', function (e) {
+            const btn = e.target.closest('[data-del]');
+            if (!btn) return;
+            const i = +btn.dataset.del;
+            if (confirm(`ต้องการลบทีม "${teams[i].name}" ใช่หรือไม่?`)) {
+                teams.splice(i, 1);
+                render();
+            }
+        });
+
+        // ==================== event: เพิ่มทีม ====================
+        document.getElementById('add-team').addEventListener('click', function () {
+            teams.push({ id: 0, name: 'ทีมใหม่', mp: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, gd: 0, pts: 0 });
+            render();
+            // focus ชื่อทีมแถวสุดท้าย
+            const lastRow = tbody.lastElementChild;
+            if (lastRow) {
+                const nameInput = lastRow.querySelector('input[data-field="name"]');
+                if (nameInput) { nameInput.focus(); nameInput.select(); }
+            }
+        });
+
+        // ==================== event: โหลดข้อมูลตัวอย่าง ====================
+        document.getElementById('reset-data').addEventListener('click', function () {
+            if (confirm('จะโหลดข้อมูลตัวอย่างทั้ง 6 ทีมมาแทนที่ข้อมูลปัจจุบันใช่หรือไม่? (ยังไม่บันทึก จนต้องกดปุ่มบันทึก)')) {
+                teams = JSON.parse(JSON.stringify(defaultData));
+                render();
+            }
+        });
+
+        // ==================== event: บันทึกข้อมูล ====================
+        const savedMsg = document.getElementById('saved-msg');
+        const errorMsg = document.getElementById('error-msg');
+        const errorText = document.getElementById('error-text');
+
+        function showError(msg) {
+            errorText.textContent = msg;
+            errorMsg.classList.remove('hidden');
+            savedMsg.classList.add('hidden');
+            setTimeout(() => errorMsg.classList.add('hidden'), 4000);
+        }
+
+        document.getElementById('save-data').addEventListener('click', function () {
+            savedMsg.classList.add('hidden');
+            errorMsg.classList.add('hidden');
+
+            // validate: ชื่อทีมห้ามว่าง
+            for (let i = 0; i < teams.length; i++) {
+                if (!teams[i].name || !String(teams[i].name).trim()) {
+                    showError('ทีมลำดับที่ ' + (i + 1) + ' ยังไม่ได้ใส่ชื่อ กรุณากรอกชื่อทีมก่อนบันทึก');
+                    const row = tbody.children[i];
+                    if (row) {
+                        const nameInput = row.querySelector('input[data-field="name"]');
+                        if (nameInput) { nameInput.focus(); nameInput.classList.add('border-red-500'); }
+                    }
+                    return;
+                }
+            }
+
+            // สร้าง array สำหรับบันทึก คำนวณค่าอัตโนมัติทุกแถว กำหนด id ใหม่
+            const out = teams.map((t, i) => {
+                recalc(t);
+                return {
+                    id: i + 1,
+                    name: String(t.name).trim(),
+                    mp: t.mp, w: t.w, d: t.d, l: t.l,
+                    gf: t.gf, ga: t.ga, gd: t.gd, pts: t.pts
+                };
+            });
+
+            safeSet('leagueData', JSON.stringify(out));
+
+            // บันทึกเวลาอัปเดต (รูปแบบ dd/mm/yyyy hh:mm ตรงกับที่ index.html แสดง)
+            const now = new Date();
+            const pad = n => String(n).padStart(2, '0');
+            const stamp = pad(now.getDate()) + '/' + pad(now.getMonth() + 1) + '/' + now.getFullYear() + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+            safeSet('lastUpdate', stamp);
+
+            // อัปเดต state ปัจจุบันให้ตรงกับที่บันทึก (เรียงลำดับใหม่ในหน้า index เอง)
+            teams = out;
+            render();
+
+            savedMsg.classList.remove('hidden');
+            setTimeout(() => savedMsg.classList.add('hidden'), 5000);
+        });
+
+        // ==================== event: ออกจากระบบ ====================
+        document.getElementById('logout').addEventListener('click', function () {
+            safeRemove('isLoggedIn');
+            location.replace('index.html');
+        });
+
+        render();
+    </script>
+</body>
+</html>
